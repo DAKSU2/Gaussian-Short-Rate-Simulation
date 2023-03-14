@@ -1,0 +1,43 @@
+library(gplots)
+library(dplyr)
+par(mfrow=c(1,2))
+
+#Values
+r0 <- 0.04   #Initial Value
+b <- 0.10    #drift 
+a <- 0.5     #alpha 
+sigma <- 0.04 #sigma
+n <- 100    # number of simulations
+T <- 10   # total time
+m <- 200   # subintervals
+
+#functions
+
+---------------------------------------------Euler discretization Method------------------------------------------
+Sim_Vasicek_Euler <-function(r0,sigma,T,m,b,a,n){                       
+  dt <- T/m
+  for(j in 1:10){
+    sim_Vas <- r0 + a*(b-r0)*dt+sigma*sqrt(dt)*rnorm(n, 0, 1)
+    Rate <-mean(sim_Vas) 
+    SE<-1.96*sd(sim_Vas)/sqrt(n) 
+    LowerB <- Rate - SE
+    UpperB <- Rate + SE 
+    return(c(Rate= Rate ,SE=SE,Lower=LowerB,Upper=UpperB))
+  }
+}
+
+Sim_Vasicek_Euler(r0,sigma,T,m,b,a,n) 
+
+---------------------------------------------Exact Solution------------------------------------------
+
+Sim_Vasicek_Exact <-function(r0,sigma,T,m,b,a,n){ 
+  dt <- T/m
+  sim_Vas1 <- (exp(-a*dt))*r0+b*(1-exp(-a*dt))+sigma*sqrt(1/(2*a)*(1-exp(-2*a*dt)))*rnorm(n, 0, 1)
+  Rate <-mean(sim_Vas1) 
+  SE<-1.96*sd(sim_Vas1)/sqrt(n) 
+  LowerB <- Rate - SE
+  UpperB <- Rate + SE 
+  return(c(Rate= Rate ,SE=SE,Lower=LowerB,Upper=UpperB))
+}
+
+Sim_Vasicek_Exact(r0,sigma,T,m,b,a,n)
