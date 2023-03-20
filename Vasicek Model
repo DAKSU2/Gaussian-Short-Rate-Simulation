@@ -1,5 +1,7 @@
 library(gplots)
 library(dplyr)
+library(ggplot2)
+
 par(mfrow=c(1,2))
 
 #Values
@@ -11,9 +13,7 @@ n <- 100    # number of simulations
 T <- 10   # total time
 m <- 200   # subintervals
 
-#functions
-
----------------------------------------------Euler discretization Method------------------------------------------
+-------------------------------------------Euler discretization Method------------------------------
 Sim_Vasicek_Euler <-function(r0,sigma,T,m,b,a,n){                       
   dt <- T/m
   for(j in 1:10){
@@ -28,7 +28,7 @@ Sim_Vasicek_Euler <-function(r0,sigma,T,m,b,a,n){
 
 Sim_Vasicek_Euler(r0,sigma,T,m,b,a,n) 
 
----------------------------------------------Exact Solution------------------------------------------
+-------------------------------------------Exact Solution-------------------------------------------
 
 Sim_Vasicek_Exact <-function(r0,sigma,T,m,b,a,n){ 
   dt <- T/m
@@ -42,4 +42,56 @@ Sim_Vasicek_Exact <-function(r0,sigma,T,m,b,a,n){
 
 Sim_Vasicek_Exact(r0,sigma,T,m,b,a,n)
 
---------------------------------------------- ? ------------------------------------------
+-------------------------------------------Term Structure with CI ----------------------------------
+
+plotVasicekExtended<-function(r0,b,a,sigma,n,T,m){
+  
+  dt <- T/m
+  r <- matrix(0,m+1,n)  # matrix to hold short rate paths
+  r[1,] <- r0
+  
+  for(j in 1:n){                                                                    
+    for(i in 2:(m+1)){
+      dr <- b*(1-exp(-a*dt))+sigma*sqrt(1/(2*a)*(1-exp(-2*a*dt)))*rnorm(1,0,1)
+      r[i,j] <- exp(-a*dt)*r[i-1,j] + dr
+    }
+  } 
+  t <- seq(0, T, dt)
+  matplot(t, r[,1:10], type="l", lty=1, main="Possible Short Rate Paths", ylab="rt") 
+  abline(h=b, col="red", lty=2)
+  
+  erg<-matrix(0,m+1,3)
+  
+  for (i in 1:m+1){
+    erg[i,1]<-mean(r[i,])
+    erg[i,2]<-quantile(r[i,],0.025)
+    erg[i,3]<-quantile(r[i,],0.975)
+    
+  }
+  return(r)
+}
+
+Sim_Vasicek_Confidence<-function(r0,b,a,sigma,n,T,m){
+  r <- matrix(0,m+1,n)                              
+  r[1,] <- r0
+  r <- plotVasicekExtended(r0,b,a,sigma,n,T,m)
+  sim_Vas<-matrix(0,m,4)
+  for (i in 1:m){
+    sim_Vas[i,1] <- mean(r[i,])
+    sim_Vas[i,4]<-1.96*sd(sim_Vas[,1])/sqrt(n) 
+    sim_Vas[i,2] <- sim_Vas[i,1] - sim_Vas[i,4]
+    sim_Vas[i,3] <- sim_Vas[i,1] + sim_Vas[i,4] 
+  }
+  lambda_vals_train <- seq(1, m, length.out = m)
+  sim_VasX <- as.data.frame(sim_Vas)
+  sim_VasX <- cbind(type = 'Short Rate', sim_VasX)
+  sim_VasX <- cbind(Date = lambda_vals_train, sim_VasX)
+  
+  ggplot(data=sim_VasX, aes(x=Date, y=V1, ymin=V2, ymax=V3, fill=type, linetype=type)) + 
+    geom_line() +
+    geom_ribbon(alpha=0.5) + 
+    xlab(as.expression(expression( paste("Date") ))) + 
+    ylab("Short Rate")
+}
+
+Sim_Vasicek_Confidence(r0,b,a,sigma,n,T,m)
